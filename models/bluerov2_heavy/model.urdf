@@ -1,18 +1,7 @@
 <?xml version="1.0"?>
 <robot name="bluerov2_heavy">
 
-  <link name="dummy_base_link"/>
-  <joint name="dummy_joint" type="fixed">
-    <parent link="dummy_base_link" />
-    <child link="base_link" />
-  </joint>
-
   <link name="base_link">
-    <inertial>
-      <origin xyz="0 0 0.011" />
-      <mass value="13.0" />
-      <inertia ixx="0.26" iyy="0.23" izz="0.37" ixy="0" ixz="0" iyz="0" />
-    </inertial>
     <visual>
       <origin />
       <geometry>
@@ -26,18 +15,32 @@
         <box size="0.457 0.575 0.05" />
       </geometry>
     </collision>
-    <gazebo>
-      <!-- IMU sensor gyro and accel data will be sent to ArduSub -->
-      <sensor name="imu_sensor" type="imu">
-        <!-- Transform from the Gazebo body frame (x-forward, y-left, z-up)
-             to the ArduPilot body frame (x-forward, y-right, z-down) -->
-        <pose>0 0 0 3.142 0 0</pose>
-        <always_on>1</always_on>
-        <update_rate>1000.0</update_rate>
-      </sensor>
-
-    </gazebo>
   </link>
+
+  <link name="dummy_base_link">
+    <inertial>
+      <origin xyz="0 0 0.011" />
+      <mass value="13.0" />
+      <inertia ixx="0.26" iyy="0.23" izz="0.37" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+
+  <joint name="dummy_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="dummy_base_link" />
+  </joint>
+
+  <gazebo reference="base_link">
+    <!-- IMU sensor gyro and accel data will be sent to ArduSub -->
+    <sensor name="imu_sensor" type="imu">
+      <!-- Transform from the Gazebo body frame (x-forward, y-left, z-up)
+           to the ArduPilot body frame (x-forward, y-right, z-down) -->
+      <pose>0 0 0 3.142 0 0</pose>
+      <always_on>1</always_on>
+      <update_rate>1000.0</update_rate>
+    </sensor>
+  </gazebo>
+
   <gazebo>
     <!-- Hydrodynamics plugin -->
     <plugin
@@ -78,7 +81,7 @@
     <visual>
       <origin rpy="-1.571 0 0" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_ccw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_ccw_prop.dae" />
       </geometry>
     </visual>
   </link>
@@ -91,7 +94,7 @@
     <visual>
       <origin rpy="-1.571 0 0" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_ccw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_ccw_prop.dae" />
       </geometry>
     </visual>
   </link>
@@ -104,7 +107,7 @@
     <visual>
       <origin rpy="1.571 0 0" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_cw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_cw_prop.dae" />
       </geometry>
     </visual>
   </link>
@@ -117,7 +120,7 @@
     <visual>
       <origin rpy="1.571 0 0" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_cw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_cw_prop.dae" />
       </geometry>
     </visual>
   </link>
@@ -130,7 +133,7 @@
     <visual>
       <origin rpy="-1.571 0 1.571" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_ccw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_ccw_prop.dae" />
       </geometry>
     </visual>
   </link>
@@ -143,7 +146,7 @@
     <visual>
       <origin rpy="1.571 0 1.571" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_cw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_cw_prop.dae" />
       </geometry>
     </visual>
   </link>
@@ -156,7 +159,7 @@
     <visual>
       <origin rpy="1.571 0 1.571" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_cw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_cw_prop.dae" />
       </geometry>
     </visual>
   </link>
@@ -169,7 +172,7 @@
     <visual>
       <origin rpy="-1.571 0 1.571" />
       <geometry>
-        <mesh filename="package://bluerov2_gz/models/bluerov2_heavy/meshes/t200_ccw_prop.dae" />
+        <mesh filename="package://bluerov2_heavy/meshes/t200_ccw_prop.dae" />
       </geometry>
     </visual>
   </link>

@@ -1,2 +1,3 @@
 prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/bluerov2_gz/worlds
 prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/bluerov2_gz/models
+prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share
