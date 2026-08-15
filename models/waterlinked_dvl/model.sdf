@@ -1,0 +1,110 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <model name="waterlinked_dvl">
+
+    <!--
+      Water Linked DVL A50.
+
+      The link origin IS the sensor's frame origin: the point where the four
+      beam axes intersect, 28 mm above the A50 back plate. Water Linked defines
+      it that way, and it is the point ArduSub's VISO_POS_* lever arm must
+      refer to, so keeping the two coincident means the mount pose can be copied
+      straight into the params with no arithmetic.
+      https://docs.waterlinked.com/dvl/axes/
+
+      Sensor axes are FRD — x forward, y starboard, z down toward the
+      transducers — which is NOT the z-up Gazebo body frame the BlueROV2 model
+      uses. Whatever attaches this model owns that rotation.
+    -->
+
+    <link name="dvl_link">
+      <inertial>
+        <mass>0.34</mass>
+        <inertia>
+          <ixx>0.0005</ixx><iyy>0.0005</iyy><izz>0.0008</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+
+      <!-- Approximate envelope only; not a dimensionally accurate A50. -->
+      <visual name="body">
+        <pose>0 0 -0.014 0 0 0</pose>
+        <geometry>
+          <cylinder><radius>0.0645</radius><length>0.028</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.12 1</ambient>
+          <diffuse>0.15 0.15 0.18 1</diffuse>
+        </material>
+      </visual>
+
+      <sensor name="dvl" type="custom" gz:type="dvl">
+        <always_on>1</always_on>
+        <!--
+          The real A50's rate is altitude-dependent, 2-15 Hz by range mode. At
+          the ~2 m altitude this course flies it sits in mode 1 (0.3-3.0 m,
+          10 Hz), so 10 Hz is the honest figure rather than a round number.
+          https://docs.waterlinked.com/dvl/range-mode/
+        -->
+        <update_rate>10</update_rate>
+        <topic>dvl/velocity</topic>
+
+        <gz:dvl>
+          <type>phased_array</type>
+          <arrangement degrees="true">
+            <!--
+              Four-beam Janus array. The 30 degree tilt is the figure from
+              Gazebo's shipped dvl_world.sdf (a Teledyne Pathfinder) and is NOT
+              verified against the A50's actual beam geometry. Tuning knob:
+              it changes both the bottom-lock footprint and how early the
+              orbit phase loses lock.
+            -->
+            <beam id="1">
+              <aperture>2</aperture><rotation>45</rotation><tilt>30</tilt>
+            </beam>
+            <beam>
+              <aperture>2</aperture><rotation>135</rotation><tilt>30</tilt>
+            </beam>
+            <beam>
+              <aperture>2</aperture><rotation>-45</rotation><tilt>30</tilt>
+            </beam>
+            <beam>
+              <aperture>2</aperture><rotation>-135</rotation><tilt>30</tilt>
+            </beam>
+          </arrangement>
+
+          <tracking>
+            <bottom_mode>
+              <when>best</when>
+              <noise type="gaussian">
+                <!--
+                  Starting point only, carried over from the shipped example.
+                  The A50 reports a per-ping figure of merit instead of a fixed
+                  stddev; whatever consumes this must map that to the EKF's
+                  velocity error rather than trusting one constant.
+                -->
+                <stddev>0.002</stddev>
+              </noise>
+              <!-- Draws the four beams in the GUI. Handy for checking mount
+                   pose and orientation; turn off once satisfied. -->
+              <visualize>true</visualize>
+            </bottom_mode>
+          </tracking>
+
+          <resolution>0.01</resolution>
+          <!--
+            A50 bottom-lock envelope: minimum altitude 5 cm, upper end of the
+            range-mode table well past anything a pool needs.
+            https://docs.waterlinked.com/dvl/range-mode/
+          -->
+          <maximum_range>50.</maximum_range>
+          <minimum_range>0.05</minimum_range>
+
+          <!-- ENU to SFM, verbatim from Gazebo's shipped dvl_world.sdf -->
+          <reference_frame>0 0 0 0 0 -1.570796</reference_frame>
+        </gz:dvl>
+      </sensor>
+    </link>
+
+  </model>
+</sdf>

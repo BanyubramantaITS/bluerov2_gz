@@ -1,5 +1,21 @@
 <?xml version="1.0"?>
-<robot name="bluerov2_heavy" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="bluerov2_heavy" xmlns:xacro="http://www.ros.org/wiki/xacro"
+       xmlns:gz="http://gazebosim.org/schema">
+
+  <!-- DVL mount, relative to base_link.
+       MEASURED, not derived from the collision box: the DVL ranges VISUAL
+       geometry, and the visual mesh's lowest point (battery bracket) is at
+       z = -0.085. Sweeping the sensor down past it, -0.08 still ranges the hull
+       at 0.026 m while -0.09 sees clear. -0.10 leaves ~15 mm of bracket
+       clearance.
+       Do NOT size this off the base_link collision box (0.457x0.575x0.05 at
+       z=0.06) — that slab is a crude stand-in for a ~0.25 m tall vehicle and
+       putting the DVL at -0.02 buries it inside the battery bracket.
+       Echo any change into VISO_POS_Z in banyu_defaults.parm (sign flips: this
+       frame is z-up, ArduPilot's is z-down). -->
+  <xacro:property name="dvl_x" value="0.0" />
+  <xacro:property name="dvl_y" value="0.0" />
+  <xacro:property name="dvl_z" value="-0.10" />
 
   <link name="base_link">
     <visual>
@@ -65,11 +81,32 @@
   </gazebo>
 
   <gazebo>
+    <!-- Water Linked DVL A50, included as its own model rather than copied in,
+         then fixed to the hull. Beams point -Z at identity rotation, so a
+         downward mount needs no rotation. -->
+    <include>
+      <uri>model://waterlinked_dvl</uri>
+      <name>dvl</name>
+      <pose>${dvl_x} ${dvl_y} ${dvl_z} 0 0 0</pose>
+    </include>
+
+    <joint name="dvl_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>dvl::dvl_link</child>
+    </joint>
+
     <plugin
       filename="gz-sim-sensors-system"
       name="gz::sim::systems::Sensors">
       <render_engine>ogre2</render_engine>
     </plugin>
+
+    <!-- The DVL is serviced by gz-sim-dvl-system, which must be declared at
+         WORLD level (see banyu_simulation/worlds/proof_of_readiness.world) —
+         declaring it here is silently ignored. The sensors-system plugin above
+         is still required to create the sensor entity, and must be declared
+         exactly once: having it both here and in the world crashes the render
+         thread with "Scene already exists with name: scene". -->
 
     <!-- Hydrodynamics plugin -->
     <plugin

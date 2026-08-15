@@ -74,6 +74,39 @@ disarm
 Additional information regarding the usage of each model may be found in a model's
 respective directory.
 
+## DVL
+
+`bluerov2_heavy` carries a Water Linked A50 Doppler Velocity Log, published on the
+gz topic `/dvl/velocity` as `gz.msgs.DVLVelocityTracking`. The sensor itself lives
+in [`models/waterlinked_dvl`](models/waterlinked_dvl/WaterLinkedDVL.md) as a
+standalone model and is fixed to `base_link` by `models/bluerov2_heavy/model.xacro`.
+
+Two things are easy to get wrong:
+
+* **The world needs `gz-sim-dvl-system` as well as `gz-sim-sensors-system`.**
+  Declaring the DVL system inside a model is silently ignored — no error, no
+  topic. Declaring `gz-sim-sensors-system` in both the model and the world
+  crashes the render thread with `Scene already exists with name: scene`; it
+  belongs in exactly one place.
+* **The mount height is measured against the visual mesh, not the collision
+  box.** The DVL ranges visual geometry, and the lowest visual point (battery
+  bracket) sits at `z = -0.085`. The mount is at `dvl_z = -0.10`. The
+  `base_link` collision box is a crude slab and sizing the mount off it buries
+  the sensor inside the hull.
+
+The mount offset has an autopilot-side twin: `VISO_POS_*` in BANYU_ROBOTX's
+`banyu_bringup/config/banyu_defaults.parm`. Change one, change the other — this
+frame is z-up, ArduPilot's is z-down.
+
+Check the sensor is alive with:
+
+~~~bash
+gz topic -e -t /dvl/velocity -n 1
+~~~
+
+`target { type: DVL_TARGET_BOTTOM }` means bottom lock. `DVL_TARGET_WATER_MASS`
+means the beams are not reaching the floor.
+
 ## ROS2 and Colcon
 
 ROS2 users should add `ardupilot_gazebo -b ros2` and `bluerov2_gz` to the colcon workspace and use
