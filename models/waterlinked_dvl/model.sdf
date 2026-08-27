@@ -19,7 +19,7 @@
 
     <link name="dvl_link">
       <inertial>
-        <mass>0.34</mass>
+        <mass>0.01</mass>
         <inertia>
           <ixx>0.0005</ixx><iyy>0.0005</iyy><izz>0.0008</izz>
           <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
