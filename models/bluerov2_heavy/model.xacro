@@ -125,9 +125,8 @@
   </joint>
 
   <gazebo>
-    <!-- Water Linked DVL A50, included as its own model rather than copied in,
-         then fixed to the hull. Beams point -Z at identity rotation, so a
-         downward mount needs no rotation. -->
+    <!-- DVL disabled for the no-DVL mission profile. Retain this block to
+         restore the Water Linked DVL A50 model and hull joint later.
     <include>
       <uri>model://waterlinked_dvl</uri>
       <name>dvl</name>
@@ -138,6 +137,7 @@
       <parent>base_link</parent>
       <child>dvl::dvl_link</child>
     </joint>
+    -->
 
     <plugin
       filename="gz-sim-sensors-system"
