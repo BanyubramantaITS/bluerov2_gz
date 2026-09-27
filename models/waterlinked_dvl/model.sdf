@@ -19,12 +19,43 @@
 
     <link name="dvl_link">
       <inertial>
-        <mass>0.34</mass>
+        <!-- Water Linked A50 datasheet: 170 g in air, 105 g submerged.
+             https://docs.waterlinked.com/dvl/dvl-a50/ -->
+        <mass>0.17</mass>
         <inertia>
-          <ixx>0.0005</ixx><iyy>0.0005</iyy><izz>0.0008</izz>
+          <ixx>0.00025</ixx><iyy>0.00025</iyy><izz>0.0004</izz>
           <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
         </inertia>
       </inertial>
+
+      <!--
+        Buoyancy volume, NOT a physical envelope.
+
+        Gazebo's buoyancy system derives displacement from COLLISION geometry
+        times a uniform fluid density; there is no per-link displaced-volume
+        override. So the only way to land the datasheet's 105 g submerged
+        weight is to give this link a collision whose volume is exactly the
+        65 cm^3 of water the difference implies (170 g - 105 g). The real A50
+        is roughly 700 cm^3 and dense with potting and aluminium; a collision
+        that size would displace 0.7 kg and make the sensor a float.
+
+        This is the same convention base_link already uses - its 0.457 x 0.575
+        x 0.05 box is documented there as "a crude stand-in", sized for
+        buoyancy rather than shape.
+
+        Why it matters: the DVL previously carried 340 g with NO collision at
+        all, so it added mass and displaced nothing. That alone made the
+        vehicle 217 g net negative (13.356 kg against 13.139 kg displaced) and
+        it free-fell throughout launch startup - measured at rel_alt -14.82 m,
+        sitting on the seabed, before a mission could even be started. RobotX
+        2026 rule 5.3 requires all systems to be positively buoyant.
+      -->
+      <collision name="displacement">
+        <pose>0 0 -0.014 0 0 0</pose>
+        <geometry>
+          <cylinder><radius>0.0645</radius><length>0.004973</length></cylinder>
+        </geometry>
+      </collision>
 
       <!-- Approximate envelope only; not a dimensionally accurate A50. -->
       <visual name="body">

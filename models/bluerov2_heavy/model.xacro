@@ -13,6 +13,10 @@
        putting the DVL at -0.02 buries it inside the battery bracket.
        Echo any change into VISO_POS_Z in banyu_defaults.parm (sign flips: this
        frame is z-up, ArduPilot's is z-down). -->
+  <!-- The competition vehicle carries no DVL. The mount below and the whole
+       DVL chain (banyu::DvlMavlink, ekf_source_switch, EK3_SRC2 params) are
+       kept for later publishing; pass dvl:=true to put the sensor back. -->
+  <xacro:arg name="dvl" default="false" />
   <xacro:property name="dvl_x" value="0.0" />
   <xacro:property name="dvl_y" value="0.0" />
   <xacro:property name="dvl_z" value="-0.10" />
@@ -80,20 +84,138 @@
     </sensor>
   </gazebo>
 
+  <!-- Bottom camera, looking straight down (pitch +90 deg turns the camera's
+       +X view axis to -Z). Ahead of the DVL so the DVL stays out of frame. -->
+  <gazebo reference="base_link">
+    <sensor name="bottom_camera" type="camera">
+      <pose>0.15 0 -0.05 0 1.5708 0</pose>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <update_rate>30</update_rate>
+      <topic>bottom_camera/image_raw</topic>
+      <camera name="bottom_camera">
+        <camera_info_topic>bottom_camera/camera_info</camera_info_topic>
+      </camera>
+    </sensor>
+  </gazebo>
+
+  <!-- Down-facing single-beam echosounder, Blue Robotics Ping2 class: 30 deg
+       beam, 0.3-100 m. Modelled as a 5x5-ray gpu_lidar cone pointing -Z (pitch
+       +90 deg); the altitude reading is the nearest return in the cone, as an
+       echosounder reports first echo. Sits where the DVL mount was, which is
+       already measured clear of the hull (see dvl_z). -->
+  <gazebo reference="base_link">
+    <sensor name="down_sonar" type="gpu_lidar">
+      <pose>0 0 -0.11 0 1.5708 0</pose>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <topic>down_sonar/scan</topic>
+      <lidar>
+        <scan>
+          <horizontal><samples>5</samples><min_angle>-0.2618</min_angle><max_angle>0.2618</max_angle></horizontal>
+          <vertical><samples>5</samples><min_angle>-0.2618</min_angle><max_angle>0.2618</max_angle></vertical>
+        </scan>
+        <range><min>0.3</min><max>100</max><resolution>0.01</resolution></range>
+        <noise><type>gaussian</type><mean>0</mean><stddev>0.01</stddev></noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <!-- Hydrophone array. Gazebo has no acoustics, so banyu_simulation's HydrophoneArray system
+       computes first-arrival times from the true poses. Positions (body frame) must match
+       banyu_detection's pinger_localization `hydrophones` parameter.
+       ponytail: square array under the hull; set to the real mount. -->
+  <gazebo>
+    <plugin filename="BanyuHydrophoneArray" name="banyu::HydrophoneArray">
+      <pinger_model>pinger_green</pinger_model>
+      <acoustic_offset>0 0 -0.186</acoustic_offset>
+      <hydrophone>0.15 0 -0.1</hydrophone>
+      <hydrophone>-0.15 0 -0.1</hydrophone>
+      <hydrophone>0 0.15 -0.1</hydrophone>
+      <hydrophone>0 -0.15 -0.1</hydrophone>
+      <ping_rate>1.0</ping_rate>
+      <jitter>2e-6</jitter>
+      <topic>/banyu/pinger/arrivals</topic>
+    </plugin>
+  </gazebo>
+
+  <!-- Four Blue Robotics Lumen lights at the lens centres of the four Lumens in
+       bluerov2_heavy.dae (measured off the mesh: lens material "239,239,239",
+       ~36 mm discs). Aimed along each lens's fitted normal: forward, pitched
+       DOWN ~10 deg (top pair) and ~20 deg (bottom pair).
+       Lumen spec: 1500 lm, 135 deg beam in water -> outer_angle 2.356 (full cone).
+       ponytail: diffuse bakes in the water loss over a typical ~1.5 m light
+       path (exp(-attenuation * 1.5), attenuation from main_world's
+       UnderwaterTurbidity) because gz lights only fall off with distance; the
+       overall 1.0 scale is uncalibrated against the scene ambient. Tune
+       lumen_gain against real footage. Backscatter from these lights is not
+       modelled by the turbidity shader, so lit images are optimistic. -->
+  <xacro:property name="lumen_gain" value="1.0" />
+  <xacro:macro name="lumen" params="name x y z pitch">
+    <gazebo reference="base_link">
+      <light name="${name}" type="spot">
+        <pose>${x} ${y} ${z} 0 0 0</pose>
+        <direction>${cos(pitch)} 0 ${-sin(pitch)}</direction>
+        <cast_shadows>false</cast_shadows>
+        <diffuse>${0.41 * lumen_gain} ${0.59 * lumen_gain} ${0.44 * lumen_gain} 1</diffuse>
+        <specular>0.05 0.05 0.05 1</specular>
+        <attenuation>
+          <range>10</range>
+          <constant>0.5</constant>
+          <linear>0</linear>
+          <quadratic>1.0</quadratic>
+        </attenuation>
+        <spot>
+          <inner_angle>1.571</inner_angle>
+          <outer_angle>2.356</outer_angle>
+          <falloff>1.0</falloff>
+        </spot>
+      </light>
+    </gazebo>
+    <!-- Glowing lens so the lamp reads as ON: gz draws no beam, only what it lights. -->
+    <link name="${name}_lens">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 ${pi / 2 + pitch} 0" />
+        <geometry><cylinder radius="0.017" length="0.002" /></geometry>
+      </visual>
+    </link>
+    <joint name="${name}_lens_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="${name}_lens" />
+      <origin xyz="${x + 0.009 * cos(pitch)} ${y} ${z - 0.009 * sin(pitch)}" rpy="0 0 0" />
+    </joint>
+    <gazebo reference="${name}_lens">
+      <visual>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <emissive>1 1 0.95 1</emissive>
+        </material>
+      </visual>
+    </gazebo>
+  </xacro:macro>
+  <xacro:lumen name="lumen_top_left" x="0.203" y="0.186" z="0.108" pitch="0.175" />
+  <xacro:lumen name="lumen_top_right" x="0.203" y="-0.186" z="0.108" pitch="0.175" />
+  <xacro:lumen name="lumen_bottom_left" x="0.207" y="0.186" z="-0.057" pitch="0.349" />
+  <xacro:lumen name="lumen_bottom_right" x="0.207" y="-0.186" z="-0.057" pitch="0.349" />
+
   <gazebo>
     <!-- Water Linked DVL A50, included as its own model rather than copied in,
          then fixed to the hull. Beams point -Z at identity rotation, so a
          downward mount needs no rotation. -->
-    <include>
-      <uri>model://waterlinked_dvl</uri>
-      <name>dvl</name>
-      <pose>${dvl_x} ${dvl_y} ${dvl_z} 0 0 0</pose>
-    </include>
+    <xacro:if value="$(arg dvl)">
+      <include>
+        <uri>model://waterlinked_dvl</uri>
+        <name>dvl</name>
+        <pose>${dvl_x} ${dvl_y} ${dvl_z} 0 0 0</pose>
+      </include>
 
-    <joint name="dvl_joint" type="fixed">
-      <parent>base_link</parent>
-      <child>dvl::dvl_link</child>
-    </joint>
+      <joint name="dvl_joint" type="fixed">
+        <parent>base_link</parent>
+        <child>dvl::dvl_link</child>
+      </joint>
+    </xacro:if>
 
     <plugin
       filename="gz-sim-sensors-system"
