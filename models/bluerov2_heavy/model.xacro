@@ -122,18 +122,53 @@
     </sensor>
   </gazebo>
 
-  <!-- Hydrophone array. Gazebo has no acoustics, so banyu_simulation's HydrophoneArray system
-       computes first-arrival times from the true poses. Positions (body frame) must match
-       banyu_detection's pinger_localization `hydrophones` parameter.
-       ponytail: square array under the hull; set to the real mount. -->
+  <!-- Hydrophone array: the positions below are the only copy. Each becomes a
+       hydrophone_N frame (TF via robot_state_publisher, read by pinger_localization)
+       and a <hydrophone> of the HydrophoneArray system, which computes first-arrival
+       times from true poses because Gazebo has no acoustics. N = ADC channel, in order.
+       Mount: the four lower frame corners, inside the side plates and above the skids.
+       Chosen over under-hull / top / front-bracket mounts by bearing error with the hull
+       shadow model below: the pinger is BELOW at the surface transit (a top array would be
+       dry at the 0.15 m float depth) and ABOVE during the survey (the hull shadows an
+       under-hull array); the wide 0.46 x 0.54 m baseline keeps late shadowed picks to a
+       few degrees. ~0.2 m from every thruster, outside both camera views.
+       ponytail: not the real mount (none yet); replace with measured positions. -->
+  <xacro:property name="hydrophone_1_xyz" value="0.23 0.27 -0.09" />   <!-- front left -->
+  <xacro:property name="hydrophone_2_xyz" value="0.23 -0.27 -0.09" />  <!-- front right -->
+  <xacro:property name="hydrophone_3_xyz" value="-0.23 0.27 -0.09" />  <!-- rear left -->
+  <xacro:property name="hydrophone_4_xyz" value="-0.23 -0.27 -0.09" /> <!-- rear right -->
+  <xacro:macro name="hydrophone" params="n xyz">
+    <link name="hydrophone_${n}">
+      <visual>
+        <geometry><cylinder radius="0.01" length="0.03" /></geometry>
+      </visual>
+    </link>
+    <joint name="hydrophone_${n}_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="hydrophone_${n}" />
+      <origin xyz="${xyz}" rpy="0 0 0" />
+    </joint>
+  </xacro:macro>
+  <xacro:hydrophone n="1" xyz="${hydrophone_1_xyz}" />
+  <xacro:hydrophone n="2" xyz="${hydrophone_2_xyz}" />
+  <xacro:hydrophone n="3" xyz="${hydrophone_3_xyz}" />
+  <xacro:hydrophone n="4" xyz="${hydrophone_4_xyz}" />
   <gazebo>
     <plugin filename="BanyuHydrophoneArray" name="banyu::HydrophoneArray">
       <pinger_model>pinger_green</pinger_model>
       <acoustic_offset>0 0 -0.186</acoustic_offset>
-      <hydrophone>0.15 0 -0.1</hydrophone>
-      <hydrophone>-0.15 0 -0.1</hydrophone>
-      <hydrophone>0 0.15 -0.1</hydrophone>
-      <hydrophone>0 -0.15 -0.1</hydrophone>
+      <hydrophone>${hydrophone_1_xyz}</hydrophone>
+      <hydrophone>${hydrophone_2_xyz}</hydrophone>
+      <hydrophone>${hydrophone_3_xyz}</hydrophone>
+      <hydrophone>${hydrophone_4_xyz}</hydrophone>
+      <!-- Hull parts big enough (> ~1 wavelength) to shadow the pinger, body frame
+           min xyz max xyz, measured off bluerov2_heavy.dae. Frame bars, thrusters and the
+           side plates (mostly cut-outs) are left out. -->
+      <blocker>-0.15 -0.057 0.003 0.19 0.057 0.117</blocker>    <!-- electronics tube -->
+      <blocker>-0.14 -0.05 -0.105 0.11 0.05 -0.005</blocker>    <!-- battery tube -->
+      <blocker>-0.21 0.057 0.061 0.21 0.157 0.136</blocker>     <!-- foam, left -->
+      <blocker>-0.21 -0.157 0.061 0.21 -0.057 0.136</blocker>   <!-- foam, right -->
+      <shadow_pick_delay>30e-6</shadow_pick_delay>
       <ping_rate>1.0</ping_rate>
       <jitter>2e-6</jitter>
       <topic>/banyu/pinger/arrivals</topic>
