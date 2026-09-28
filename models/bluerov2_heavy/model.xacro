@@ -175,6 +175,57 @@
     </plugin>
   </gazebo>
 
+  <!-- Magnetic repair probe (Task 2, handbook 3.3.3): a rigid rod hanging under the bow with
+       a magnet at its tip, held on a light node's switch to "repair" it. The tip is in the
+       bottom camera's view (0.07 m ahead of it, 0.40 m down: ~14 deg off axis), so the
+       mission servos the red ring onto the tip's pixel while it lowers. Matte black so the
+       Lumens do not make it a bright blob in the pipe and light detectors.
+       probe_tip is its own gz link (preserveFixedJoint) so PipelineLights reads the tip pose
+       straight off the model. Mass is about the water it displaces: trim-neutral.
+       ponytail: no real probe yet; replace with the measured mount.
+       Task 2 Core tier needs no probe: probe:=false leaves it off. -->
+  <xacro:arg name="probe" default="true" />
+  <xacro:property name="probe_tip_xyz" value="0.22 0 -0.45" />
+  <xacro:property name="probe_length" value="0.36" />
+  <xacro:if value="$(arg probe)">
+    <link name="probe_tip">
+      <inertial>
+        <origin xyz="0 0 ${probe_length / 2}" />
+        <mass value="0.03" />
+        <inertia ixx="3e-4" iyy="3e-4" izz="1e-6" ixy="0" ixz="0" iyz="0" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 ${probe_length / 2}" />
+        <geometry><cylinder radius="0.005" length="${probe_length}" /></geometry>
+      </visual>
+      <visual>
+        <origin xyz="0 0 0.01" />
+        <geometry><cylinder radius="0.01" length="0.02" /></geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${probe_length / 2}" />
+        <geometry><cylinder radius="0.01" length="${probe_length}" /></geometry>
+      </collision>
+    </link>
+    <joint name="probe_tip_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="probe_tip" />
+      <origin xyz="${probe_tip_xyz}" rpy="0 0 0" />
+    </joint>
+    <gazebo reference="probe_tip_joint">
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+    <gazebo reference="probe_tip">
+      <visual>
+        <material>
+          <ambient>0.02 0.02 0.02 1</ambient>
+          <diffuse>0.02 0.02 0.02 1</diffuse>
+          <specular>0 0 0 1</specular>
+        </material>
+      </visual>
+    </gazebo>
+  </xacro:if>
+
   <!-- Four Blue Robotics Lumen lights at the lens centres of the four Lumens in
        bluerov2_heavy.dae (measured off the mesh: lens material "239,239,239",
        ~36 mm discs). Aimed along each lens's fitted normal: forward, pitched
